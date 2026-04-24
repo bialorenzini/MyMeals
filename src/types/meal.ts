@@ -7,6 +7,10 @@ export interface Meal {
   category: MealCategory;
   date: string;       // 'YYYY-MM-DD'
   time: string;       // 'HH:MM'
+  calories: number;   // kcal per 100g (0 = not informed)
+  protein: number;    // g per 100g
+  carbs: number;      // g per 100g
+  fat: number;        // g per 100g
   created_at: string;
 }
 

@@ -3,16 +3,16 @@ import {
   View,
   Text,
   TouchableOpacity,
-  SafeAreaView,
   Alert,
   ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { RootStackParamList } from '../navigation/types';
-import { getMealById, deleteMeal } from '../database/database';
+import { getMealById, deleteMeal, getIngredientsByMealId, MealIngredient } from '../database/database';
 import { Meal, CATEGORY_EMOJI, CATEGORY_LABELS } from '../types/meal';
 import { Colors } from '../theme';
 
@@ -26,12 +26,14 @@ function formatDate(dateStr: string): string {
 export default function MealDetailScreen({ navigation, route }: Props) {
   const { mealId } = route.params;
   const [meal, setMeal] = useState<Meal | null>(null);
+  const [ingredients, setIngredients] = useState<MealIngredient[]>([]);
 
   useFocusEffect(
     useCallback(() => {
       const found = getMealById(mealId);
       if (!found) { navigation.goBack(); return; }
       setMeal(found);
+      setIngredients(getIngredientsByMealId(mealId));
     }, [mealId])
   );
 
@@ -150,6 +152,66 @@ export default function MealDetailScreen({ navigation, route }: Props) {
             {meal.description || 'Sem descrição.'}
           </Text>
         </View>
+
+        {/* Macronutrientes — total + lista de ingredientes */}
+        {meal.calories > 0 && (
+          <View
+            className="rounded-2xl p-4 gap-3"
+            style={{
+              backgroundColor: '#4ECDC410',
+              borderWidth: 1.5,
+              borderColor: '#4ECDC440',
+            }}
+          >
+            <Text className="text-ink text-base font-bold">🧬 Macronutrientes (total da refeição)</Text>
+            <View className="flex-row flex-wrap gap-2">
+              {[
+                { emoji: '🔥', label: 'Calorias', value: `${meal.calories}`, unit: 'kcal', color: '#FF6B6B' },
+                { emoji: '🥩', label: 'Proteínas', value: `${meal.protein}`, unit: 'g', color: '#4ECDC4' },
+                { emoji: '🌾', label: 'Carboidratos', value: `${meal.carbs}`, unit: 'g', color: '#FFB347' },
+                { emoji: '🫒', label: 'Gorduras', value: `${meal.fat}`, unit: 'g', color: '#9B89C9' },
+              ].map((m) => (
+                <View
+                  key={m.label}
+                  className="rounded-2xl items-center py-3"
+                  style={{ backgroundColor: m.color + '18', flex: 1, minWidth: '22%' }}
+                >
+                  <Text style={{ fontSize: 20 }}>{m.emoji}</Text>
+                  <Text className="font-black text-base mt-1" style={{ color: m.color }}>
+                    {m.value}
+                    <Text className="font-normal text-xs"> {m.unit}</Text>
+                  </Text>
+                  <Text className="text-muted" style={{ fontSize: 10 }}>{m.label}</Text>
+                </View>
+              ))}
+            </View>
+
+            {/* Lista de ingredientes */}
+            {ingredients.length > 0 && (
+              <View className="gap-2 mt-1">
+                <Text className="text-dim text-xs font-bold uppercase tracking-widest">
+                  Ingredientes
+                </Text>
+                {ingredients.map((ing) => (
+                  <View
+                    key={ing.id}
+                    className="bg-surface rounded-xl px-3 py-2 flex-row items-center justify-between"
+                    style={{ borderWidth: 1, borderColor: '#DFE6E9' }}
+                  >
+                    <View className="flex-1 mr-2">
+                      <Text className="text-ink text-sm font-semibold" numberOfLines={1}>{ing.name}</Text>
+                      {ing.brand ? <Text className="text-muted text-xs">{ing.brand}</Text> : null}
+                    </View>
+                    <View className="items-end gap-0.5">
+                      <Text className="text-ink text-xs font-bold">{ing.grams}g</Text>
+                      <Text className="text-muted text-xs">🔥 {ing.calories} kcal</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Registered at */}
         <Text className="text-muted text-xs text-center mt-1">
